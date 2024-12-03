@@ -79,7 +79,7 @@ class FilePathDataset(torch.utils.data.Dataset):
         spect_params = SPECT_PARAMS
         mel_params = MEL_PARAMS
 
-        _data_list = [l[:-1].split('|') for l in data_list]
+        _data_list = [l.strip().split('|') for l in data_list]
         self.data_list = [data if len(data) == 3 else (*data, 0) for data in _data_list]
         self.text_cleaner = TextCleaner()
         self.sr = sr
@@ -93,7 +93,7 @@ class FilePathDataset(torch.utils.data.Dataset):
         self.max_mel_length = 192
         
         self.min_length = min_length
-        with open(OOD_data, 'r') as f:
+        with open(OOD_data, 'r', encoding='utf-8') as f:
             tl = f.readlines()
         idx = 1 if '.wav' in tl[0].split('|')[0] else 0
         self.ptexts = [t.split('|')[idx] for t in tl]

@@ -11,6 +11,7 @@ import torchaudio
 import librosa
 import click
 import shutil
+import traceback
 import warnings
 warnings.simplefilter('ignore')
 from torch.utils.tensorboard import SummaryWriter
@@ -494,12 +495,6 @@ def main(config_path):
                 optimizer.zero_grad()
                 loss_gen_lm.backward()
 
-                # SLM discriminator loss
-                if d_loss_slm != 0:
-                    optimizer.zero_grad()
-                    d_loss_slm.backward(retain_graph=True)
-                    optimizer.step('wd')
-
                 # compute the gradient norm
                 total_norm = {}
                 for key in model.keys():
@@ -533,6 +528,13 @@ def main(config_path):
                 optimizer.step('bert')
                 optimizer.step('predictor')
                 optimizer.step('diffusion')
+
+                # SLM discriminator loss
+                if d_loss_slm != 0:
+                    optimizer.zero_grad()
+                    d_loss_slm.backward(retain_graph=True)
+                    optimizer.step('wd')
+
             else:
                 d_loss_slm, loss_gen_lm = 0, 0
                 
@@ -668,14 +670,16 @@ def main(config_path):
                     loss_f += (loss_F0).mean()
 
                     iters_test += 1
-                except:
+                except Exception as e:
+                    print(f"run into exception", e)
+                    traceback.print_exc()
                     continue
 
         print('Epochs:', epoch + 1)
         logger.info('Validation loss: %.3f, Dur loss: %.3f, F0 loss: %.3f' % (loss_test / iters_test, loss_align / iters_test, loss_f / iters_test) + '\n\n\n')
         print('\n\n\n')
         writer.add_scalar('eval/mel_loss', loss_test / iters_test, epoch + 1)
-        writer.add_scalar('eval/dur_loss', loss_test / iters_test, epoch + 1)
+        writer.add_scalar('eval/dur_loss', loss_align / iters_test, epoch + 1)
         writer.add_scalar('eval/F0_loss', loss_f / iters_test, epoch + 1)
         
         if epoch < joint_epoch:
